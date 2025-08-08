@@ -1,12 +1,10 @@
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import db from "./db.js";
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 // ✅ Create Schools Table if not exists (on server start)
@@ -69,3 +67,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
