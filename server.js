@@ -28,6 +28,7 @@ db.query(createTableSQL, (err) => {
 // ✅ POST API - Add a new school
 app.post("/schools", (req, res) => {
   const { name, address, latitude, longitude } = req.body;
+  console.log("📦 Incoming body:", req.body);
 
   if (!name || !address || latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: "All fields are required" });
@@ -67,4 +68,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
 
