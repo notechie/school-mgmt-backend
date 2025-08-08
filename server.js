@@ -1,13 +1,16 @@
 import express from "express";
+import cors from "cors";
 import dotenv from "dotenv";
 import db from "./db.js";
 
 dotenv.config();
+
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// Create table if not exists
-db.query(`
+// ✅ Create Schools Table if not exists (on server start)
+const createTableSQL = `
   CREATE TABLE IF NOT EXISTS schools (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -15,58 +18,54 @@ db.query(`
     latitude FLOAT NOT NULL,
     longitude FLOAT NOT NULL
   )
-`);
+`;
+db.query(createTableSQL, (err) => {
+  if (err) {
+    console.error("❌ Table creation failed:", err.message);
+  } else {
+    console.log("✅ 'schools' table is ready");
+  }
+});
 
-// ✅ Create a new school
+// ✅ POST API - Add a new school
 app.post("/schools", (req, res) => {
   const { name, address, latitude, longitude } = req.body;
-  if (!name || !address || !latitude || !longitude) {
+
+  if (!name || !address || latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: "All fields are required" });
   }
+
   const sql = "INSERT INTO schools (name, address, latitude, longitude) VALUES (?, ?, ?, ?)";
   db.query(sql, [name, address, latitude, longitude], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ message: "School added", id: result.insertId });
+    if (err) {
+      console.error("❌ Insert failed:", err.message);
+      return res.status(500).json({ error: "Database insert failed" });
+    }
+    res.status(201).json({
+      message: "School added successfully",
+      id: result.insertId
+    });
   });
 });
 
-// ✅ Get all schools
+// ✅ GET API - Fetch all schools
 app.get("/schools", (req, res) => {
-  db.query("SELECT * FROM schools", (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
+  db.query("SELECT * FROM schools", (err, rows) => {
+    if (err) {
+      console.error("❌ Fetch failed:", err.message);
+      return res.status(500).json({ error: "Database fetch failed" });
+    }
+    res.json(rows);
   });
 });
 
-// ✅ Get school by ID
-app.get("/schools/:id", (req, res) => {
-  db.query("SELECT * FROM schools WHERE id = ?", [req.params.id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (results.length === 0) return res.status(404).json({ error: "School not found" });
-    res.json(results[0]);
-  });
+// ✅ Default route
+app.get("/", (req, res) => {
+  res.send("School Management API is running 🚀");
 });
 
-// ✅ Update school by ID
-app.put("/schools/:id", (req, res) => {
-  const { name, address, latitude, longitude } = req.body;
-  const sql = "UPDATE schools SET name=?, address=?, latitude=?, longitude=? WHERE id=?";
-  db.query(sql, [name, address, latitude, longitude, req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (result.affectedRows === 0) return res.status(404).json({ error: "School not found" });
-    res.json({ message: "School updated" });
-  });
-});
-
-// ✅ Delete school by ID
-app.delete("/schools/:id", (req, res) => {
-  db.query("DELETE FROM schools WHERE id = ?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (result.affectedRows === 0) return res.status(404).json({ error: "School not found" });
-    res.json({ message: "School deleted" });
-  });
-});
-
-app.listen(process.env.PORT || 5000, () => {
-  console.log(`🚀 Server running on port ${process.env.PORT || 5000}`);
+// ✅ Start Server (for local + Railway)
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
